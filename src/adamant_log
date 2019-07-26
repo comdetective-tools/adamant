@@ -1,0 +1,8 @@
+adm_database.C: In function ‘void adamant::adm_db_print()’:
+adm_database.C:157:7: warning: unused variable ‘all’ [-Wunused-variable]
+  bool all = adm_conf_string("+all", "1");
+       ^
+adm_database.C: At global scope:
+adm_database.C:137:12: warning: ‘int min(int, int)’ defined but not used [-Wunused-function]
+ static int min(int a, int b)
+            ^
