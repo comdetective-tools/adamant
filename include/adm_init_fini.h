@@ -8,34 +8,28 @@ void inc_false_matrix(uint64_t address1, uint64_t address2, int a, int b, double
 
 void inc_true_matrix(uint64_t address, int a, int b, double inc_false_matrix);
 
-void* malloc_adm(void* ptr, size_t size);
+void malloc_adm(void* ptr, size_t size, int object_id);
 
 void free_adm(void* ptr);
 
-void* calloc_adm(size_t nmemb, size_t size);
+void realloc_adm(void *ptr, size_t size, int object_id);
 
-void* calloc_adm2(size_t nmemb, size_t size);
-/*
-void* realloc_adm(void *ptr, size_t size);
+void posix_memalign_adm(int ret, void** memptr, size_t alignment, size_t size, int object_id);
 
-int posix_memalign_adm(void** memptr, size_t alignment, size_t size);
+void memalign_adm(void * ptr, size_t size, int object_id);
 
-void* memalign_adm(size_t alignment, size_t size);
+void aligned_alloc_adm(void * ptr, size_t size, int object_id);
 
-void* aligned_alloc_adm(size_t alignment, size_t size);
+void valloc_adm(void * ptr, size_t size, int object_id);
 
-void* valloc_adm(size_t size);
+void pvalloc_adm(void * ptr, size_t size, int object_id);
 
-void* pvalloc_adm(size_t size);*/
+void numa_alloc_onnode_adm(void* ptr, size_t size, int object_id);
 
-void realloc_adm(void * pptr, void *ptr, size_t size);
+void numa_alloc_interleaved_adm(void* ptr, size_t size, int object_id);
 
-int posix_memalign_adm(int ret, void** memptr, size_t alignment, size_t size);
+void mmap_adm(void* ptr, size_t size, int object_id);
 
-void memalign_adm(void * ptr, size_t size);
+void mmap64_adm(void* ptr, size_t size, int object_id);
 
-void aligned_alloc_adm(void * ptr, size_t size);
-
-void valloc_adm(void * ptr, size_t size);
-
-void pvalloc_adm(void * ptr, size_t size);
+char * adm_get_var_name(uint64_t address);

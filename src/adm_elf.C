@@ -33,7 +33,7 @@ adm_elf_parse_table(char* lib, const char* str, const Elf64_Sym* symbols, const 
         else
           strcpy(fname, str+symbols[sf].st_name);
       }
-      adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size);
+      adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size, 0);
       if(obj) {
         obj->meta.meta[ADM_META_VAR_TYPE] = names->malloc(strlen(str+symbols[s].st_name)+1);
         strcpy(static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]), str+symbols[s].st_name);
@@ -67,7 +67,7 @@ adm_elf_parse_table(char* lib, const char* str, const Elf64_Sym* symbols, const 
           else
             adm_warning("Cannot allocate symbol name ", str+symbols[s].st_name, "!");
 
-          adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size);
+          adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size, 0);
           if(obj) {
             obj->meta.meta[ADM_META_VAR_TYPE] = value;
             obj->meta.meta[ADM_META_BIN_TYPE] = lib;
@@ -88,7 +88,7 @@ adm_elf_parse_table(char* lib, const char* str, const Elf64_Sym* symbols, const 
             else
               adm_warning("Cannot allocate symbol name ", str+symbols[s].st_name, "!");
           }
-          adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size);
+          adm_object_t* obj = adm_db_insert(base+symbols[s].st_value, symbols[s].st_size, 0);
           if(obj) {
             obj->meta.meta[ADM_META_VAR_TYPE] = value;
             obj->meta.meta[ADM_META_BIN_TYPE] = lib;
@@ -256,7 +256,7 @@ void adamant::adm_elf_init() noexcept
       map.getline(buffer, ADM_MAX_PATH);
       int ret=sscanf(buffer, "%" PRIx64 "-%" PRIx64 " %4s %" PRIx64 " %5s %" PRIx64 " %s\n", &start, &end, perms, &offset, device, &inode, name);
       if(ret==7 && strcmp(name,"[stack]")==0) {
-        adm_object_t* obj = adm_db_insert(start, end-start);
+        adm_object_t* obj = adm_db_insert(start, end-start, 0);
         if(obj) {
           obj->meta.meta[ADM_META_VAR_TYPE] = names->malloc(sizeof("[stack]"+1));
           strcpy(static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]), "[stack]");

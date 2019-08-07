@@ -9,7 +9,7 @@ using namespace adamant;
 static inline
 void adm_process_event(const adm_event_t& event) noexcept
 {
-  adm_object_t* obj = adm_db_find(event.address);
+  adm_object_t* obj = adm_db_find_by_address(event.address);
   if(obj)
     obj->process(event);
   else

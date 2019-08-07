@@ -9,6 +9,11 @@
 #include <adm.h>
 #include <adm_config.h>
 #include <adm_common.h>
+#include <iostream>
+#include <iomanip>
+#include <pthread.h>
+
+static pthread_mutex_t object_lock = PTHREAD_MUTEX_INITIALIZER;
 
 namespace adamant
 {
@@ -49,8 +54,7 @@ class stack_t
 
 class adm_object_t
 {
-    uint64_t size;
-    uint64_t address;
+    int object_id;
     double false_sharing_matrix[1024][1024];
     double false_sharing_core_matrix[1024][1024];
     double false_sharing_count;
@@ -59,19 +63,128 @@ class adm_object_t
     double true_sharing_core_matrix[1024][1024];
     double true_sharing_count;
     double true_sharing_core_count;
+    adm_object_t* parent;
+    adm_object_t* left;
+    adm_object_t* right;
+
+    void zigzig(adm_object_t* granpa) noexcept
+    {
+      adm_object_t* tmp = parent->right;
+      granpa->left=tmp;
+      if(tmp) tmp->parent=granpa;
+
+      parent->left=right;
+      if(right) right->parent=parent;
+    
+      tmp = granpa->parent;
+
+      parent->right=granpa;
+      granpa->parent=parent;
+      right=parent;
+      right->parent=this;
+
+      parent=tmp;
+      if(tmp) {
+        if(tmp->right==granpa) tmp->right=this;
+        else tmp->left=this;
+      }
+    
+    }
+
+    void zagzag(adm_object_t* granpa) noexcept
+    {
+      adm_object_t* tmp = parent->left;
+      granpa->right=tmp;
+      if(tmp) tmp->parent=granpa;
+
+      parent->right=left;
+      if(left) left->parent=parent;
+    
+      tmp = granpa->parent;
+
+      parent->left=granpa;
+      granpa->parent=parent;
+      left=parent;
+      left->parent=this;
+
+      parent=tmp;
+      if(tmp) {
+        if(tmp->right==granpa) tmp->right=this;
+        else tmp->left=this;
+      }
+    }
+
+    void zagzig(adm_object_t* granpa) noexcept
+    {
+      parent->right=left;
+      if(left) left->parent=parent;
+
+      granpa->left=right;
+      if(right) right->parent=granpa;
+    
+      adm_object_t* root = granpa->parent;
+
+      left=parent;
+      left->parent=this;
+      right=granpa;
+      right->parent=this;
+
+      parent=root;
+      if(root) {
+        if(root->right==granpa) root->right=this;
+        else root->left=this;
+      }
+    }
+
+    void zigzag(adm_object_t* granpa) noexcept
+    {
+      granpa->right=left;
+      if(left) left->parent=granpa;
+
+      parent->left=right;
+      if(right) right->parent=parent;
+    
+      adm_object_t* root = granpa->parent;
+
+      left=granpa;
+      granpa->parent=this;
+      right=parent;
+      parent->parent=this;
+
+      parent=root;
+      if(root) {
+        if(root->right==granpa) root->right=this;
+        else root->left=this;
+      }
+    }
+
+    void zig() noexcept
+    {
+      parent->left = right;
+      if(right) right->parent = parent;
+      right = parent;
+      right->parent = this;
+      parent = nullptr;
+    }
+    
+    void zag() noexcept
+    {
+      parent->right = left;
+      if(left) left->parent = parent;
+      left = parent;
+      left->parent = this;
+      parent = nullptr;
+    }
+
   public:
 
     adm_meta_t meta;
 
-    adm_object_t(): size(0), address(0) {}
+    adm_object_t(): object_id(0) {}
 
-    uint64_t get_address() const noexcept { return address; };
+    int get_object_id() const noexcept { return object_id; };
 
-    void set_address(const uint64_t a) noexcept { address=a; };
-
-    uint64_t get_size() const noexcept { return size&0x0FFFFFFFFFFFFFFF; };
-
-    void set_size(const uint64_t s) {size = (size&0xF000000000000000)|s; };
+    void set_object_id(const int a) noexcept { object_id=a; };
 
     void inc_fs_matrix(int a, int b, double inc) {false_sharing_matrix[a][b] = false_sharing_matrix[a][b] + inc;};
 
@@ -105,24 +218,107 @@ class adm_object_t
 
     double get_ts_core_matrix_value(int a, int b) const noexcept { return true_sharing_core_matrix[a][b]; };
 
-    state_t get_state() const noexcept { return static_cast<state_t>(size>>60); };
-
-    void set_state(const state_t state) {size = (size&0x0FFFFFFFFFFFFFFF)|(static_cast<uint64_t>(state)<<60); };
-
-    void add_state(const state_t state) {size |= (static_cast<uint64_t>(state)<<60); };
-
     bool has_events() const noexcept { return meta.has_events(); }
 
     void process(const adm_event_t& event) noexcept { meta.process(event); }
 
     void print() const noexcept;
+
+    adm_object_t* min() noexcept
+    {
+      pthread_mutex_lock(&object_lock);
+      //fprintf(stderr, "1 ");
+      adm_object_t* m = this;
+      while(m->left) m=m->left;
+      //fprintf(stderr, "2 ");
+      pthread_mutex_unlock(&object_lock);
+      return m;
+    }
+
+    adm_object_t* find(const int object_id) noexcept
+    {
+      pthread_mutex_lock(&object_lock);
+      //fprintf(stderr, "1 ");
+      adm_object_t* f = this;
+      while(f) {
+        if(f->object_id == object_id) break;
+        if(object_id < f->object_id) f = f->left;
+        else f = f->right;
+      }
+      //fprintf(stderr, "2 ");
+      pthread_mutex_unlock(&object_lock);
+      return f;
+    }
+
+    void find_with_parent(const int object_id, adm_object_t*& p, adm_object_t*& f) noexcept
+    {
+      pthread_mutex_lock(&object_lock);
+      //fprintf(stderr, "1 ");
+      f = this; p = f->parent;
+      while(f) {
+        if(f->object_id == object_id) break;
+        p = f;
+        if(object_id < f->object_id) f = f->left;
+        else f = f->right;
+      }
+      //fprintf(stderr, "2 ");
+      pthread_mutex_unlock(&object_lock);
+    }
+
+    void insert(adm_object_t* a) noexcept
+    {
+      pthread_mutex_lock(&object_lock);
+      //fprintf(stderr, "1 ");
+      if(object_id>a->object_id) left = a;
+      else right = a;
+      a->parent = this;
+      //fprintf(stderr, "2 ");
+      pthread_mutex_unlock(&object_lock);
+    }
+
+    adm_object_t* splay() noexcept
+    {
+      pthread_mutex_lock(&object_lock);
+      //fprintf(stderr, "1 ");
+      while(parent) {
+        adm_object_t* granpa = parent->parent;
+
+        if(granpa) {
+          if(parent->right==this) {
+            if(granpa->left==parent) zagzig(granpa);
+            else zagzag(granpa);
+          } else {
+            if(granpa->left==parent) zigzig(granpa);
+            else zigzag(granpa);
+          }
+        }
+        else {
+          if(parent->left==this) zig();
+          else zag();
+        }
+      }
+      //fprintf(stderr, "2 ");
+      pthread_mutex_unlock(&object_lock);
+      return this;
+    }
+
+    void postorder(int indent)
+    {
+	if(this->left != nullptr) this->left->postorder(indent+4);
+        if(this->right != nullptr) this->right->postorder(indent+4);
+        if (indent) {
+            std::cout << std::setw(indent) << ' ';
+        }
+        std::cout<< this->object_id << "\n ";
+    }
+
 };
  
 ADM_VISIBILITY
-adm_object_t* adm_db_insert(const uint64_t address, const uint64_t size, const state_t state=ADM_STATE_STATIC) noexcept;
+adm_object_t* adm_db_insert(const uint64_t address, const uint64_t size, const int object_id, const state_t state=ADM_STATE_STATIC) noexcept;
 
 ADM_VISIBILITY
-adm_object_t* adm_db_find(const uint64_t address) noexcept;
+adm_object_t* adm_db_find_by_address(const uint64_t address) noexcept;
 
 ADM_VISIBILITY
 void adm_db_update_size(const uint64_t address, const uint64_t size) noexcept;
@@ -142,6 +338,9 @@ static inline void adm_meta_fini() noexcept {};
 
 ADM_VISIBILITY
 void adm_db_print(char output_directory[], const char * executable_name, int pid) noexcept;
+
+ADM_VISIBILITY
+char* adm_db_get_var_name(uint64_t address) noexcept;
 
 }
 

@@ -180,15 +180,20 @@ void core_matrix_size_set(int size)
   core_matrix_size = size;
 }
 
+extern "C"
+char * adm_get_var_name(uint64_t address)
+{
+  return adm_db_get_var_name(address);
+}
 
 extern "C"
 //__attribute__((destructor))
 void inc_false_matrix(uint64_t address1, uint64_t address2, int a, int b, double inc)
 {
-  adm_object_t* obj1 = adm_db_find(address1);
-  adm_object_t* obj2 = adm_db_find(address2);
+  adm_object_t* obj1 = adm_db_find_by_address(address1);
+  adm_object_t* obj2 = adm_db_find_by_address(address2);
   if(obj1 && obj2) {
-        if(obj1->get_address() == obj2->get_address()) {
+        if(obj1->get_object_id() == obj2->get_object_id()) {
                 obj1->inc_fs_matrix(a, b, inc);
         } else {
                 obj1->inc_fs_matrix(a, b, inc);
@@ -205,10 +210,10 @@ extern "C"
 //__attribute__((destructor))
 void inc_false_core_matrix(uint64_t address1, uint64_t address2, int a, int b, double inc)
 {
-  adm_object_t* obj1 = adm_db_find(address1);
-  adm_object_t* obj2 = adm_db_find(address2);
+  adm_object_t* obj1 = adm_db_find_by_address(address1);
+  adm_object_t* obj2 = adm_db_find_by_address(address2);
   if(obj1 && obj2) {
-	if(obj1->get_address() == obj2->get_address()) {
+	if(obj1->get_object_id() == obj2->get_object_id()) {
 		obj1->inc_fs_core_matrix(a, b, inc);
 	} else {
 		obj1->inc_fs_core_matrix(a, b, inc);
@@ -225,11 +230,11 @@ extern "C"
 //__attribute__((destructor))
 void inc_false_count(uint64_t address1, uint64_t address2, double inc)
 {
-  adm_object_t* obj1 = adm_db_find(address1);
-  adm_object_t* obj2 = adm_db_find(address2);
+  adm_object_t* obj1 = adm_db_find_by_address(address1);
+  adm_object_t* obj2 = adm_db_find_by_address(address2);
 
   if(obj1 && obj2) {
-        if(obj1->get_address() == obj2->get_address()) {
+        if(obj1->get_object_id() == obj2->get_object_id()) {
                 obj1->inc_fs_count(inc);
         } else {
                 obj1->inc_fs_count(inc);
@@ -256,11 +261,11 @@ void inc_false_core_count(uint64_t address1, uint64_t address2, double inc)
     obj->inc_fs_core_count(inc);
   }*/
 
-  adm_object_t* obj1 = adm_db_find(address1);
-  adm_object_t* obj2 = adm_db_find(address2);
+  adm_object_t* obj1 = adm_db_find_by_address(address1);
+  adm_object_t* obj2 = adm_db_find_by_address(address2);
 
   if(obj1 && obj2) {
-        if(obj1->get_address() == obj2->get_address()) {
+        if(obj1->get_object_id() == obj2->get_object_id()) {
                 obj1->inc_fs_core_count(inc);
         } else {
                 obj1->inc_fs_core_count(inc);
@@ -277,7 +282,7 @@ extern "C"
 //__attribute__((destructor))
 void inc_true_matrix(uint64_t address, int a, int b, double inc)
 {
-  adm_object_t* obj = adm_db_find(address);
+  adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_matrix(a, b, inc);
   }
@@ -287,7 +292,7 @@ extern "C"
 //__attribute__((destructor))
 void inc_true_core_matrix(uint64_t address, int a, int b, double inc)
 {
-  adm_object_t* obj = adm_db_find(address);
+  adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_core_matrix(a, b, inc);
   }
@@ -298,7 +303,7 @@ extern "C"
 //__attribute__((destructor))
 void inc_true_count(uint64_t address, double inc)
 {
-  adm_object_t* obj = adm_db_find(address);
+  adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_count(inc);
   }
@@ -308,7 +313,7 @@ extern "C"
 //__attribute__((destructor))
 void inc_true_core_count(uint64_t address, double inc)
 {
-  adm_object_t* obj = adm_db_find(address);
+  adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_core_count(inc);
   }

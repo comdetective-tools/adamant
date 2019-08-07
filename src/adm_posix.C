@@ -57,7 +57,7 @@ void pointers_init()
   /*malloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "malloc"));
   free_ptr = reinterpret_cast<void(*)(void*)>(dlsym(RTLD_NEXT, "free"));
   realloc_ptr = reinterpret_cast<void*(*)(void*,size_t)>(dlsym(RTLD_NEXT, "realloc"));*/
-  calloc_ptr = reinterpret_cast<void*(*)(size_t,size_t)>(dlsym(RTLD_NEXT, "calloc"));
+  //calloc_ptr = reinterpret_cast<void*(*)(size_t,size_t)>(dlsym(RTLD_NEXT, "calloc"));
   fprintf(stderr, "calloc is initialized 2\n");
   /*valloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "valloc"));
   pvalloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "pvalloc"));
@@ -69,32 +69,17 @@ void pointers_init()
   munmap_ptr = reinterpret_cast<int(*)(void*,size_t)>(dlsym(RTLD_NEXT, "munmap"));*/
 }
 
-extern "C" void* malloc_adm(void* ptr, size_t size)
+extern "C" void malloc_adm(void* ptr, size_t size, int object_id)
 {
-  /*if(!malloc_ptr) {
-    if(init_posix) {
-      if(size<ADM_MEM_MIN_ALLOC) size=ADM_MEM_MIN_ALLOC;
-      if(static_buffer_ptr+size>static_buffer+ADM_MEM_STATIC_BUFFER) return 0; 
-      uint8_t* buffer = static_buffer_ptr;
-      static_buffer_ptr+=size;
-      return buffer;
-    }
-    else {
-      init_posix=1;
-      pointers_init();
-    }
-  }
-
-  void* ptr = malloc_ptr(size);*/
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  return ptr;
+  //return ptr;
 }
 
 extern "C" void free_adm(void* ptr)
@@ -109,193 +94,22 @@ extern "C" void free_adm(void* ptr)
   //}
 }
 
-extern "C" void* calloc_adm(size_t nmemb, size_t size)
+extern "C" void realloc_adm(void* ptr, size_t size, int object_id)
 {
-  if(!calloc_ptr) {
-    if(init_posix) {
-      fprintf(stderr, "calloc 1\n");
-      size*=nmemb;
-      if(size<ADM_MEM_MIN_ALLOC) size=ADM_MEM_MIN_ALLOC;
-      if(static_buffer_ptr+size>static_buffer+ADM_MEM_STATIC_BUFFER) return 0; 
-      uint8_t* buffer = static_buffer_ptr;
-      static_buffer_ptr+=size;
-      memset(buffer,0,size);
-      return buffer;
-    }
-    else {
-      fprintf(stderr, "calloc 2\n");
-      init_posix=1;
-      pointers_init();
-    }
-  }
-  fprintf(stderr, "calloc before\n");
-  void* ptr = calloc_ptr(nmemb,size);
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  fprintf(stderr, "calloc after\n");
-  return ptr;
 }
 
-extern "C" void* calloc_adm2(size_t nmemb, size_t size)
-{
-  if(!calloc_ptr) {
-    if(init_posix) {
-      size*=nmemb;
-      if(size<ADM_MEM_MIN_ALLOC) size=ADM_MEM_MIN_ALLOC;
-      if(static_buffer_ptr+size>static_buffer+ADM_MEM_STATIC_BUFFER) return 0; 
-      uint8_t* buffer = static_buffer_ptr;
-      static_buffer_ptr+=size;
-      memset(buffer,0,size);
-      return buffer;
-    }
-    else {
-      init_posix=1;
-      pointers_init();
-    }
-  }
-
-  void* ptr = calloc_ptr(nmemb,size);
-  return ptr;
-}
-
-extern "C" void realloc_adm(void *pptr, void *ptr, size_t size)
-{
-  if(static_cast<uint8_t*>(ptr)<static_buffer || static_cast<uint8_t*>(ptr)>=static_buffer+ADM_MEM_MIN_ALLOC) {
-    //pptr = realloc_ptr(ptr,size);
-    if(adm_set_tracing(0)) {
-      if(ptr) {
-        if(size) {
-          if(pptr==ptr)
-            adm_db_update_size(reinterpret_cast<uint64_t>(ptr), size);
-          else if(pptr) {
-            adm_db_update_state(reinterpret_cast<uint64_t>(ptr), ADM_STATE_FREE);
-            adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-            if(obj) {
-              if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-                get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-            }
-          }
-        }
-        else
-          adm_db_update_state(reinterpret_cast<uint64_t>(ptr), ADM_STATE_FREE);
-      }
-      else if(pptr) {
-        adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-        if(obj) {
-          if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-            get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-        }
-      }
-      adm_set_tracing(1);
-    }
-  }
-  else {
-    pptr = realloc_ptr(0,size);
-    if(pptr && adm_set_tracing(0)) {
-      adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-      if(obj) {
-        if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-          get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-      }
-      adm_set_tracing(1);
-    }
-
-    if(pptr) {
-      if(static_cast<uint8_t*>(ptr)+size>static_buffer+ADM_MEM_STATIC_BUFFER)
-        memcpy(pptr, ptr, static_buffer+ADM_MEM_STATIC_BUFFER-static_cast<uint8_t*>(ptr));
-      else
-        memcpy(pptr, ptr, size);
-    }
-  }
-
-  //return pptr;
-}
-
-/*
-extern "C" void* realloc_adm(void *ptr, size_t size)
-{
-  if(!realloc_ptr) {
-    if(ptr && size==0)
-      return 0;
-
-    if(init_posix) {
-      size_t osize = size;
-      if(size<ADM_MEM_MIN_ALLOC) size=ADM_MEM_MIN_ALLOC;
-      if(static_buffer_ptr+size>static_buffer+ADM_MEM_STATIC_BUFFER) return 0; 
-      uint8_t* buffer = static_buffer_ptr;
-      static_buffer_ptr+=size;
-      if(ptr) memcpy(buffer, ptr, osize);
-      return buffer;
-    }
-    else {
-      init_posix=1;
-      pointers_init();
-    }
-  }
-
-  if(!realloc_ptr) pointers_init();
-  void* pptr=nullptr;
-  if(static_cast<uint8_t*>(ptr)<static_buffer || static_cast<uint8_t*>(ptr)>=static_buffer+ADM_MEM_MIN_ALLOC) {
-    pptr = realloc_ptr(ptr,size);
-    if(adm_set_tracing(0)) {
-      if(ptr) {
-        if(size) {
-          if(pptr==ptr)
-            adm_db_update_size(reinterpret_cast<uint64_t>(ptr), size);
-          else if(pptr) {
-            adm_db_update_state(reinterpret_cast<uint64_t>(ptr), ADM_STATE_FREE);
-            adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-            if(obj) {
-              if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-                get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-            }
-          }
-        }
-        else
-          adm_db_update_state(reinterpret_cast<uint64_t>(ptr), ADM_STATE_FREE);
-      }
-      else if(pptr) {
-        adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-        if(obj) {
-          if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-            get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-        }
-      }
-      adm_set_tracing(1);
-    }
-  }
-  else {
-    pptr = realloc_ptr(0,size);
-    if(pptr && adm_set_tracing(0)) {
-      adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(pptr), size, ADM_STATE_ALLOC);
-      if(obj) {
-        if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-          get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-      }
-      adm_set_tracing(1);
-    }
-
-    if(pptr) {
-      if(static_cast<uint8_t*>(ptr)+size>static_buffer+ADM_MEM_STATIC_BUFFER)
-        memcpy(pptr, ptr, static_buffer+ADM_MEM_STATIC_BUFFER-static_cast<uint8_t*>(ptr));
-      else
-        memcpy(pptr, ptr, size);
-    }
-  }
-
-  return pptr;
-}*/
-
-extern "C" void posix_memalign_adm(int ret, void** memptr, size_t alignment, size_t size)
+extern "C" void posix_memalign_adm(int ret, void** memptr, size_t alignment, size_t size, int object_id)
 {
   if(ret==0 && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(*memptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(*memptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
@@ -304,27 +118,10 @@ extern "C" void posix_memalign_adm(int ret, void** memptr, size_t alignment, siz
   }
 }
 
-/*
-extern "C" int posix_memalign_adm(void** memptr, size_t alignment, size_t size)
-{
-  if(!posix_memalign_ptr) pointers_init();
-  int ret = posix_memalign_ptr(memptr, alignment, size);
-  if(ret==0 && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(*memptr), size, ADM_STATE_ALLOC);
-    if(obj) {
-      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-    }
-    adm_set_tracing(1);
-  }
-    
-  return ret;
-}*/
-
-extern "C" void memalign_adm(void * ptr, size_t size)
+extern "C" void memalign_adm(void * ptr, size_t size, int object_id)
 {
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
@@ -333,117 +130,92 @@ extern "C" void memalign_adm(void * ptr, size_t size)
   }
 }
 
-/*
-extern "C" void* memalign_adm(size_t alignment, size_t size)
+extern "C" void aligned_alloc_adm(void *ptr, size_t size, int object_id)
 {
-  if(!memalign_ptr) pointers_init();
-  void* ptr = memalign_ptr(alignment, size);
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  return ptr;
-}*/
-
-extern "C" void aligned_alloc_adm(void *ptr, size_t size)
-{
-  if(ptr && adm_set_tracing(0)) {
-    //printf("aligned_alloc: line 4\n");
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
-    //printf("aligned_alloc: line 5\n");
-    if(obj) {
-      //printf("aligned_alloc: line 6\n");
-      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-        //printf("aligned_alloc: line 7\n");
-        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-        //printf("aligned_alloc: line 8\n");
-    }
-    //printf("aligned_alloc: line 9\n");
-    adm_set_tracing(1);
-    //printf("aligned_alloc line 10\n");
-  }
-  //return ptr;
 }
 
-/*
-extern "C" void* aligned_alloc_adm(size_t alignment, size_t size)
-{
-  if(!aligned_alloc_ptr) pointers_init();
-  void* ptr = aligned_alloc_ptr(alignment, size);
-  if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
-    if(obj) {
-      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-    }
-    adm_set_tracing(1);
-  }
-  return ptr;
-}*/
 
-extern "C" void valloc_adm(void* ptr, size_t size)
+extern "C" void valloc_adm(void* ptr, size_t size, int object_id)
 {
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  //return ptr;
 }
 
-/*
-extern "C" void* valloc_adm(size_t size)
+extern "C" void pvalloc_adm(void* ptr, size_t size, int object_id)
 {
-  if(!valloc_ptr) pointers_init();
-  void* ptr = valloc_ptr(size);
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  return ptr;
-}*/
-
-extern "C" void pvalloc_adm(void* ptr, size_t size)
-{
-  //if(!pvalloc_ptr) pointers_init();
-  //void* ptr = pvalloc_ptr(size);
-  if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
-    if(obj) {
-      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
-        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
-    }
-    adm_set_tracing(1);
-  }
-  //return ptr;
 }
 
-/*
-extern "C" void* pvalloc_adm(size_t size)
+
+extern "C" void numa_alloc_onnode_adm(void* ptr, size_t size, int object_id)
 {
-  if(!pvalloc_ptr) pointers_init();
-  void* ptr = pvalloc_ptr(size);
   if(ptr && adm_set_tracing(0)) {
-    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, ADM_STATE_ALLOC);
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
     if(obj) {
       if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
         get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
     }
     adm_set_tracing(1);
   }
-  return ptr;
-}*/
+}
+
+
+extern "C" void numa_alloc_interleaved_adm(void* ptr, size_t size, int object_id)
+{
+  if(ptr && adm_set_tracing(0)) {
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
+    if(obj) {
+      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
+        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
+    }
+    adm_set_tracing(1);
+  }
+}
+
+extern "C" void mmap_adm(void* ptr, size_t size, int object_id)
+{
+  if(ptr && adm_set_tracing(0)) {
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
+    if(obj) {
+      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
+        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
+    }
+    adm_set_tracing(1);
+  }
+}
+
+extern "C" void mmap64_adm(void* ptr, size_t size, int object_id)
+{
+  if(ptr && adm_set_tracing(0)) {
+    adm_object_t* obj = adm_db_insert(reinterpret_cast<uint64_t>(ptr), size, object_id, ADM_STATE_ALLOC);
+    if(obj) {
+      if((obj->meta.meta[ADM_META_STACK_TYPE] = stacks->malloc()))
+        get_stack(*static_cast<adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]));
+    }
+    adm_set_tracing(1);
+  }
+}
 
 void adamant::adm_posix_init()
 {

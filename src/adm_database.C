@@ -14,6 +14,7 @@ using namespace std;
 using namespace adamant;
 
 static adm_splay_tree_t* tree = nullptr;
+static adm_object_t* object_tree = nullptr;
 static pool_t<adm_splay_tree_t, ADM_DB_OBJ_BLOCKSIZE>* nodes = nullptr;
 static pool_t<adm_object_t, ADM_DB_OBJ_BLOCKSIZE>* objects = nullptr;
 extern int matrix_size;
@@ -26,8 +27,8 @@ struct sharing_struct {
 } object_ts_count[100], object_fs_count[100], object_comm_count[100], object_ts_core_count[100], object_fs_core_count[100], object_comm_core_count[100];*/
 
 struct shared_object {
-    uint64_t address; 
-    uint64_t size;
+    int object_id; 
+    //uint64_t size;
     double count; 
       
     // This function is used by set to order 
@@ -39,23 +40,47 @@ struct shared_object {
 };
 
 static inline
-adm_splay_tree_t* adm_db_find_node(const uint64_t address) noexcept
+adm_splay_tree_t* adm_db_find_node_by_address(const uint64_t address) noexcept
 {
-  if(tree)
-    return tree->find(address);
+  if(tree) {
+    adm_splay_tree_t* node = tree->find(address);
+    if(node) { 
+	pthread_mutex_lock(&node_lock);
+	tree = node->splay();
+	pthread_mutex_unlock(&node_lock);   	
+    	return node;
+    } 
+    return nullptr;
+  }
   return nullptr;
 }
 
 ADM_VISIBILITY
-adm_object_t* adamant::adm_db_find(const uint64_t address) noexcept
+adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
 {
-  adm_splay_tree_t* node = adm_db_find_node(address);
+  adm_splay_tree_t* node = adm_db_find_node_by_address(address);
   if(node) return node->object;
   return nullptr;
 }
 
+static inline
+adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept
+{
+  if(object_tree) {
+    adm_object_t* obj = object_tree->find(object_id);
+    if(obj) {
+	pthread_mutex_lock(&node_lock);
+	object_tree = obj->splay();
+	pthread_mutex_unlock(&node_lock);
+    	return obj;
+    }
+    return nullptr;
+  }
+  return nullptr;
+}
+
 ADM_VISIBILITY
-adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size, const state_t state) noexcept
+adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size, const int object_id, const state_t state) noexcept
 {
   adm_splay_tree_t* obj = nullptr;
   adm_splay_tree_t* pos = nullptr;
@@ -64,41 +89,86 @@ adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size
   if(obj==nullptr) {
     obj = nodes->malloc();
     if(obj==nullptr) return nullptr;
+	// serach existing object by id first
 
-    obj->object = objects->malloc();
-    if(obj->object==nullptr) return nullptr;
+    adm_object_t* target_object = nullptr;
+    adm_object_t* parent_object = nullptr;
 
-    obj->start = address;
-    obj->object->set_address(address); 
+    if(object_tree) object_tree->find_with_parent(object_id, parent_object, target_object);
+
+    if(target_object==nullptr) {
+    	obj->object = objects->malloc();
+    	if(obj->object==nullptr) return nullptr;
+	obj->object->set_object_id(object_id);
+	target_object = obj->object;
+	if(parent_object!=nullptr)
+      		parent_object->insert(target_object);
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+    } else {
+	obj->object = target_object;
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+    }
+    obj->start = address; 
     obj->end = obj->start+size;
-    obj->object->set_size(size);
-    obj->object->set_state(state);
+    obj->set_size(size);
+    obj->set_state(state);
     if(pos!=nullptr)
       pos->insert(obj);
+    pthread_mutex_lock(&node_lock);
     tree = obj->splay();
+    pthread_mutex_unlock(&node_lock);
   }
   else {
-    if(!(obj->object->get_state()&ADM_STATE_FREE)) {
+    if(!(obj->get_state()&ADM_STATE_FREE)) {
       if(obj->start==address)
         adm_warning("db_insert: address already in tree and not free - ", address);
       else if(obj->start<address && address<obj->end)
         adm_warning("db_insert: address in range of another address in tree - ", obj->start, "..", obj->end, " (", address, ")");
       if(obj->end<address+size) {
         obj->end = address+size;
-        obj->object->set_size(size);
+        obj->set_size(size);
       }
+      pthread_mutex_lock(&node_lock);
       tree = obj->splay();
+      pthread_mutex_unlock(&node_lock);
     }
     else {
-      obj->object = objects->malloc();
+      //obj->object = objects->malloc();
       if(obj->object==nullptr) return nullptr;
 
       obj->start = address;
-      obj->object->set_address(address); 
+
+      adm_object_t* target_object = nullptr;
+      adm_object_t* parent_object = nullptr;
+
+      if(object_tree) object_tree->find_with_parent(object_id, parent_object, target_object);
+
+      if(target_object==nullptr) {
+    	obj->object = objects->malloc();
+    	if(obj->object==nullptr) return nullptr;
+	obj->object->set_object_id(object_id);
+	target_object = obj->object;
+	if(parent_object!=nullptr)
+      		parent_object->insert(target_object);
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+      } else {
+	obj->object = target_object;
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+      }
       obj->end = obj->start+size;
-      obj->object->set_size(size);
-      obj->object->set_state(state);
+      obj->set_size(size);
+      obj->set_state(state);
+      pthread_mutex_lock(&node_lock);
       tree = obj->splay();
+      pthread_mutex_unlock(&node_lock);
     }
   }
 
@@ -108,17 +178,17 @@ adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size
 ADM_VISIBILITY
 void adamant::adm_db_update_size(const uint64_t address, const uint64_t size) noexcept
 {
-  adm_splay_tree_t* obj = adm_db_find_node(address);
+  adm_splay_tree_t* obj = adm_db_find_node_by_address(address);
   if(obj) {
-    obj->object->set_size(size);
+    obj->set_size(size);
     if(obj->start!=address) {
       adm_warning("db_update_size: address in range of another address in tree - ", obj->start, "..", obj->end, "(", address, ")");
       obj->start = address;
-      obj->object->set_address(address);
     }
     obj->end = address+size;
-    obj->object->set_size(size);
+    pthread_mutex_lock(&node_lock);
     tree = obj->splay();
+    pthread_mutex_unlock(&node_lock);
   }
   else adm_warning("db_update_size: address not in tree - ", address);
 }
@@ -126,9 +196,9 @@ void adamant::adm_db_update_size(const uint64_t address, const uint64_t size) no
 ADM_VISIBILITY
 void adamant::adm_db_update_state(const uint64_t address, const state_t state) noexcept
 {
-  adm_splay_tree_t* obj = adm_db_find_node(address);
+  adm_splay_tree_t* obj = adm_db_find_node_by_address(address);
   if(obj) {
-    obj->object->add_state(state);
+    obj->add_state(state);
     if(obj->start!=address)
       adm_warning("db_update_state: address in range of another address in tree - ", obj->start, "..", obj->end, "(", address, ")");
   }
@@ -144,8 +214,15 @@ static int min(int a, int b)
 }
 
 ADM_VISIBILITY
+char* adamant::adm_db_get_var_name(uint64_t address) noexcept {
+	adm_object_t* obj = adm_db_find_by_address(address);
+	return static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]);
+}
+
+ADM_VISIBILITY
 void adamant::adm_db_print(char output_directory[], const char * executable_name, int pid ) noexcept
 {
+	fprintf(stderr, "in adm_db_print\n");
 	set<struct shared_object> object_ts_count; 
 	set<struct shared_object> object_ts_core_count;
 
@@ -159,27 +236,27 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 	pool_t<adm_splay_tree_t, ADM_DB_OBJ_BLOCKSIZE>::iterator n(*nodes);
 	int i = 0;
 	int object_count = 0;
-	//fprintf(stderr, "reach 1");
+	fprintf(stderr, "reach 1\n");
 	for(adm_splay_tree_t* obj = n.next(); obj!=nullptr; obj = n.next()) {
 		//fprintf(stderr, "iteration begins\n");
-		shared_object ts_node = { obj->object->get_address(), obj->object->get_size(), obj->object->get_ts_count() };
+		shared_object ts_node = { obj->object->get_object_id(), obj->object->get_ts_count() };
 		object_ts_count.insert(ts_node);
 		//fprintf(stderr, "iteration mids\n");
-		shared_object ts_core_node = { obj->object->get_address(),obj->object->get_size(), obj->object->get_ts_core_count() };
+		shared_object ts_core_node = { obj->object->get_object_id(), obj->object->get_ts_core_count() };
 		object_ts_core_count.insert(ts_core_node);
 
-		shared_object fs_node = { obj->object->get_address(),obj->object->get_size(), obj->object->get_fs_count() };
+		shared_object fs_node = { obj->object->get_object_id(), obj->object->get_fs_count() };
 		object_fs_count.insert(fs_node);
 
 		//fprintf(stderr, "iteration mids 1/2\n");
 
-		shared_object fs_core_node = { obj->object->get_address(),obj->object->get_size(), obj->object->get_fs_core_count() };
+		shared_object fs_core_node = { obj->object->get_object_id(), obj->object->get_fs_core_count() };
 		object_fs_core_count.insert(fs_core_node);
 
-		shared_object comm_node = { obj->object->get_address(),obj->object->get_size(), obj->object->get_fs_count() + obj->object->get_ts_count() };
+		shared_object comm_node = { obj->object->get_object_id(), obj->object->get_fs_count() + obj->object->get_ts_count() };
 		object_comm_count.insert(comm_node);
 
-		shared_object comm_core_node = { obj->object->get_address(),obj->object->get_size(), obj->object->get_fs_core_count() + obj->object->get_ts_core_count() };
+		shared_object comm_core_node = { obj->object->get_object_id(), obj->object->get_fs_core_count() + obj->object->get_ts_core_count() };
 		object_comm_core_count.insert(comm_core_node);
 		//fprintf(stderr, "iteration mids 2\n");
 		//obj->object->print();
@@ -187,30 +264,28 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		//fprintf(stderr, "iteration ends\n");
 		//fprintf(stderr, "object count: %d\n", object_count);
   	}
-	//fprintf(stderr, "reach 2");
+	fprintf(stderr, "reach 2\n");
    	set<struct shared_object>::iterator it;  
   	
 	FILE * ts_fp;
 	char ts_file_name[PATH_MAX];
 	sprintf(ts_file_name, "%s/%s-%d-ts_object_ranking.txt", output_directory, executable_name, pid );
 	ts_fp = fopen (ts_file_name, "w+");    
-	//fprintf(stderr, "reach 3");
+	fprintf(stderr, "reach 3\n");
 	for (it = object_ts_count.begin(), i = 0; it != object_ts_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 		//char * var_name = static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]);
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".ts_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 		fp = fopen (file_name, "w+");
-        	fprintf(ts_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(ts_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -239,26 +314,25 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
     	} 
 	fclose(ts_fp);
 
+	fprintf(stderr, "reach 4\n");
 	FILE * ts_core_fp;
 	char ts_core_file_name[PATH_MAX];
 	sprintf(ts_core_file_name, "%s/%s-%d-ts_core_object_ranking.txt", output_directory, executable_name, pid );
 	ts_core_fp = fopen (ts_core_file_name, "w+");    
-
+	fprintf(stderr, "reach 5\n");
 	for (it = object_ts_core_count.begin(), i = 0; it != object_ts_core_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".ts_core_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 		fp = fopen (file_name, "w+");
-        	fprintf(ts_core_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(ts_core_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -286,28 +360,26 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(ts_core_fp);
-	
+	fprintf(stderr, "reach 6\n");
 	// before
 	FILE * fs_fp;
 	char fs_file_name[PATH_MAX];
 	sprintf(fs_file_name, "%s/%s-%d-fs_object_ranking.txt", output_directory, executable_name, pid );
 	fs_fp = fopen (fs_file_name, "w+");    
-
+	fprintf(stderr, "reach 7\n");
 	for (it = object_fs_count.begin(), i = 0; it != object_fs_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".fs_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 		fp = fopen (file_name, "w+");
-        	fprintf(fs_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(fs_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -335,27 +407,25 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(fs_fp);
-
+	fprintf(stderr, "reach 8\n");
 	FILE * fs_core_fp;
 	char fs_core_file_name[PATH_MAX];
 	sprintf(fs_core_file_name, "%s/%s-%d-fs_core_object_ranking.txt", output_directory, executable_name, pid );
 	fs_core_fp = fopen (fs_core_file_name, "w+");    
-
+	fprintf(stderr, "reach 9\n");
 	for (it = object_fs_core_count.begin(), i = 0; it != object_fs_core_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".fs_core_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 		fp = fopen (file_name, "w+");
-        	fprintf(fs_core_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(fs_core_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -384,30 +454,28 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
     	} 
 	fclose(fs_core_fp);
 	// after
-
+	fprintf(stderr, "reach 10\n");
 	// before
 	FILE * comm_fp;
 	char comm_file_name[PATH_MAX];
 	sprintf(comm_file_name, "%s/%s-%d-as_object_ranking.txt", output_directory, executable_name, pid );
 	comm_fp = fopen (comm_file_name, "w+");    
-
+	fprintf(stderr, "reach 11\n");
 	for (it = object_comm_count.begin(), i = 0; it != object_comm_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".as_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 
 		fp = fopen (file_name, "w+");
-        	fprintf(comm_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(comm_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -435,27 +503,25 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(comm_fp);
-
+	fprintf(stderr, "reach 12\n");
 	FILE * comm_core_fp;
 	char comm_core_file_name[PATH_MAX];
 	sprintf(comm_core_file_name, "%s/%s-%d-as_core_object_ranking.txt", output_directory, executable_name, pid );
 	comm_core_fp = fopen (comm_core_file_name, "w+");    
-
+	fprintf(stderr, "reach 13\n");
 	for (it = object_comm_core_count.begin(), i = 0; it != object_comm_core_count.end() && i < 50; it++, i++) 
 	{  
-		adm_object_t* obj = adm_db_find((*it).address); 
+		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
 		FILE * fp;
 
 		char file_name[PATH_MAX];
 		char append[100];
-		char address_index[20];
-		sprintf(address_index,"%lx", (*it).address);
 		//strcpy (file_name, address_index);
 		sprintf(append,".as_core_matrix_rank_%d.csv", i);
 		//strcat(file_name, append);
-		sprintf(file_name, "%s/%s-%d-%s-%s", output_directory, executable_name, pid, address_index, append );
+		sprintf(file_name, "%s/%s-%d-%d-%s", output_directory, executable_name, pid, (*it).object_id, append );
 		fp = fopen (file_name, "w+");
-        	fprintf(comm_core_fp, "largest %d: address: %lx size: %ld, count: %0.2lf, from variable %s ", i, (*it).address, (*it).size, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
+        	fprintf(comm_core_fp, "largest %d: object with id: %d, count: %0.2lf, from variable %s ", i, (*it).object_id, (*it).count, static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]));
 		// before
 
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
@@ -483,6 +549,11 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(comm_core_fp);
+	fprintf(stderr, "reach 14\n");
+	fprintf(stderr, "pretty printing tree of objects\n");
+	object_tree->postorder(0);
+	fprintf(stderr, "pretty printing tree of address ranges\n");
+	tree->postorder(0);
 	// after
 }
 
@@ -504,12 +575,12 @@ void adamant::adm_db_fini() noexcept
 ADM_VISIBILITY
 void adm_object_t::print() const noexcept
 {
-  uint64_t a = get_address();
+  int a = get_object_id();
   adm_out(&a, sizeof(a));
-  uint64_t z = get_size();
+  /*uint64_t z = get_size();
   adm_out(&z, sizeof(z));
   state_t s = get_state();
-  adm_out(&s, sizeof(s));
+  adm_out(&s, sizeof(s));*/
   //adm_meta_print_stack
   //adm_meta_print_base
 
