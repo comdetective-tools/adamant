@@ -33,3 +33,11 @@ void mmap_adm(void* ptr, size_t size, int object_id);
 void mmap64_adm(void* ptr, size_t size, int object_id);
 
 char * adm_get_var_name(uint64_t address);
+
+void inc_true_count(uint64_t address, double inc);
+
+void inc_true_core_count(uint64_t address, double inc);
+
+void inc_false_count(uint64_t address1, uint64_t address2, double inc);
+
+void inc_false_core_count(uint64_t address1, uint64_t address2, double inc);

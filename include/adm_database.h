@@ -13,8 +13,6 @@
 #include <iomanip>
 #include <pthread.h>
 
-#define DICTIONARY_SIZE 101
-
 static pthread_mutex_t object_lock = PTHREAD_MUTEX_INITIALIZER;
 
 namespace adamant
@@ -68,15 +66,11 @@ class adm_object_t
     double false_sharing_matrix[1024][1024];
     double false_sharing_core_matrix[1024][1024];
     double false_sharing_count;
-    adm_object_site_t false_sharing_count_per_site[DICTIONARY_SIZE];
     double false_sharing_core_count;
-    adm_object_site_t false_sharing_core_count_per_site[DICTIONARY_SIZE];
     double true_sharing_matrix[1024][1024];
     double true_sharing_core_matrix[1024][1024];
     double true_sharing_count;
-    adm_object_site_t true_sharing_count_per_site[DICTIONARY_SIZE];
     double true_sharing_core_count;
-    adm_object_site_t true_sharing_core_count_per_site[DICTIONARY_SIZE];
     adm_object_t* parent;
     adm_object_t* left;
     adm_object_t* right;
@@ -215,88 +209,6 @@ class adm_object_t
     void inc_ts_count(double inc) {true_sharing_count = true_sharing_count + inc;};
 
     void inc_ts_core_count(double inc) {true_sharing_core_count = true_sharing_core_count + inc;};
-
-    // before
-    void inc_fs_count_per_site(int object_id, double inc) {
-	int hashIndex = object_id % DICTIONARY_SIZE;
-	int iter = 0;
-   	while(false_sharing_count_per_site[hashIndex].object_id != -1 && false_sharing_count_per_site[hashIndex].object_id != object_id && iter < DICTIONARY_SIZE) {
-      		++hashIndex;
-      		hashIndex %= DICTIONARY_SIZE;
-		iter++;
-   	}
-	if(false_sharing_count_per_site[hashIndex].object_id == -1) {
-   		false_sharing_count_per_site[hashIndex].object_id = object_id;
-		false_sharing_count_per_site[hashIndex].communication_count = inc;
-	}
-	if(false_sharing_count_per_site[hashIndex].object_id == object_id) {
-   		false_sharing_count_per_site[hashIndex].communication_count += inc;
-	}
-	if(iter == DICTIONARY_SIZE) {
-   		fprintf(stderr, "the object encounters false sharing events in too many places.\n");
-	}
-    };
-
-    void inc_fs_core_count_per_site(int object_id, double inc) {
-	int hashIndex = object_id % DICTIONARY_SIZE;
-	int iter = 0;
-   	while(false_sharing_core_count_per_site[hashIndex].object_id != -1 && false_sharing_core_count_per_site[hashIndex].object_id != object_id && iter < DICTIONARY_SIZE) {
-      		++hashIndex;
-      		hashIndex %= DICTIONARY_SIZE;
-		iter++;
-   	}
-	if(false_sharing_core_count_per_site[hashIndex].object_id == -1) {
-   		false_sharing_core_count_per_site[hashIndex].object_id = object_id;
-		false_sharing_core_count_per_site[hashIndex].communication_count = inc;
-	}
-	if(false_sharing_core_count_per_site[hashIndex].object_id == object_id) {
-   		false_sharing_core_count_per_site[hashIndex].communication_count += inc;
-	}
-	if(iter == DICTIONARY_SIZE) {
-   		fprintf(stderr, "the object encounters inter core false sharing events in too many places.\n");
-	}
-    };
-
-    void inc_ts_count_per_site(int object_id, double inc) {
-	int hashIndex = object_id % DICTIONARY_SIZE;
-	int iter = 0;
-   	while(true_sharing_count_per_site[hashIndex].object_id != -1 && true_sharing_count_per_site[hashIndex].object_id != object_id && iter < DICTIONARY_SIZE) {
-      		++hashIndex;
-      		hashIndex %= DICTIONARY_SIZE;
-		iter++;
-   	}
-	if(true_sharing_count_per_site[hashIndex].object_id == -1) {
-   		true_sharing_count_per_site[hashIndex].object_id = object_id;
-		true_sharing_count_per_site[hashIndex].communication_count = inc;
-	}
-	if(true_sharing_count_per_site[hashIndex].object_id == object_id) {
-   		true_sharing_count_per_site[hashIndex].communication_count += inc;
-	}
-	if(iter == DICTIONARY_SIZE) {
-   		fprintf(stderr, "the object encounters true sharing events in too many places.\n");
-	}
-    };
-
-    void inc_ts_core_count_per_site(int object_id, double inc) {
-	int hashIndex = object_id % DICTIONARY_SIZE;
-	int iter = 0;
-   	while(true_sharing_core_count_per_site[hashIndex].object_id != -1 && true_sharing_core_count_per_site[hashIndex].object_id != object_id && iter < DICTIONARY_SIZE) {
-      		++hashIndex;
-      		hashIndex %= DICTIONARY_SIZE;
-		iter++;
-   	}
-	if(true_sharing_core_count_per_site[hashIndex].object_id == -1) {
-   		true_sharing_core_count_per_site[hashIndex].object_id = object_id;
-		true_sharing_core_count_per_site[hashIndex].communication_count = inc;
-	}
-	if(true_sharing_core_count_per_site[hashIndex].object_id == object_id) {
-   		true_sharing_core_count_per_site[hashIndex].communication_count += inc;
-	}
-	if(iter == DICTIONARY_SIZE) {
-   		fprintf(stderr, "the object encounters inter core true sharing events in too many places.\n");
-	}
-    };
-    // after
 
     double get_fs_count() const noexcept { return false_sharing_count; };
 

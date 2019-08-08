@@ -231,7 +231,7 @@ void inc_false_core_matrix(uint64_t address1, uint64_t address2, int a, int b, d
 
 extern "C"
 //__attribute__((destructor))
-void inc_false_count(uint64_t address1, uint64_t address2, int object_id, double inc)
+void inc_false_count(uint64_t address1, uint64_t address2, double inc)
 {
   adm_object_t* obj1 = adm_db_find_by_address(address1);
   adm_object_t* obj2 = adm_db_find_by_address(address2);
@@ -239,19 +239,14 @@ void inc_false_count(uint64_t address1, uint64_t address2, int object_id, double
   if(obj1 && obj2) {
         if(obj1->get_object_id() == obj2->get_object_id()) {
                 obj1->inc_fs_count(inc);
-		obj1->inc_fs_count_per_site(object_id, inc);
         } else {
                 obj1->inc_fs_count(inc);
-		obj1->inc_fs_count_per_site(object_id, inc);
                 obj2->inc_fs_count(inc);
-		obj2->inc_fs_count_per_site(object_id, inc);
         }
   } else if(obj1) {
         obj1->inc_fs_count(inc);
-	obj1->inc_fs_count_per_site(object_id, inc);
   } else if(obj2) {
         obj2->inc_fs_count(inc);
-	obj2->inc_fs_count_per_site(object_id, inc);
   }
 
 
@@ -262,7 +257,7 @@ void inc_false_count(uint64_t address1, uint64_t address2, int object_id, double
 
 extern "C"
 //__attribute__((destructor))
-void inc_false_core_count(uint64_t address1, uint64_t address2, int object_id,  double inc)
+void inc_false_core_count(uint64_t address1, uint64_t address2, double inc)
 {
   /*adm_object_t* obj = adm_db_find(address);
   if(obj) {
@@ -275,19 +270,14 @@ void inc_false_core_count(uint64_t address1, uint64_t address2, int object_id,  
   if(obj1 && obj2) {
         if(obj1->get_object_id() == obj2->get_object_id()) {
                 obj1->inc_fs_core_count(inc);
-		obj1->inc_fs_core_count_per_site(object_id, inc);
         } else {
                 obj1->inc_fs_core_count(inc);
-		obj1->inc_fs_core_count_per_site(object_id, inc);
                 obj2->inc_fs_core_count(inc);
-		obj2->inc_fs_core_count_per_site(object_id, inc);
         }
   } else if(obj1) {
         obj1->inc_fs_core_count(inc);
-	obj1->inc_fs_core_count_per_site(object_id, inc);
   } else if(obj2) {
         obj2->inc_fs_core_count(inc);
-	obj2->inc_fs_core_count_per_site(object_id, inc);
   }
 }
 
@@ -314,23 +304,21 @@ void inc_true_core_matrix(uint64_t address, int a, int b, double inc)
 
 extern "C"
 //__attribute__((destructor))
-void inc_true_count(uint64_t address, int object_id,  double inc)
+void inc_true_count(uint64_t address, double inc)
 {
   adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_count(inc);
-    obj->inc_ts_count_per_site(object_id, inc);
   }
 }
 
 extern "C"
 //__attribute__((destructor))
-void inc_true_core_count(uint64_t address, int object_id, double inc)
+void inc_true_core_count(uint64_t address, double inc)
 {
   adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_core_count(inc);
-    obj->inc_ts_core_count_per_site(object_id, inc);
   }
 }
 
