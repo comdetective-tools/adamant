@@ -124,11 +124,14 @@ void adm_io_fini() noexcept
 void __attribute__((weak)) adm_mod_init() {};
 void __attribute__((weak)) adm_mod_fini() {};
 
+extern int var_id_count;
+
 extern "C"
 //__attribute__((constructor))
 void adm_initialize()
 {
   init_posix = 1;
+  var_id_count = 2;
   pointers_init();
   //fprintf(stderr, "adm is initialized\n");
   //adm_io_init();
