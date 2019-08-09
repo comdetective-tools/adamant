@@ -223,7 +223,7 @@ class adm_splay_tree_t
         if (indent) {
             std::cout << std::setw(indent) << ' ';
         }
-        fprintf(stdout, "offset address: %lx, associated object: %d\n", this->start, this->object->get_object_id());
+        fprintf(stdout, "offset address: %lx, end address: %lx, associated object: %d, comm count: %0.2lf\n", this->start, this->end, this->object->get_object_id(), this->object->get_fs_count() + this->object->get_ts_count());
     }
 
     state_t get_state() const noexcept { return static_cast<state_t>(size>>60); };
