@@ -258,11 +258,13 @@ void adamant::adm_elf_init() noexcept
       map.getline(buffer, ADM_MAX_PATH);
       int ret=sscanf(buffer, "%" PRIx64 "-%" PRIx64 " %4s %" PRIx64 " %5s %" PRIx64 " %s\n", &start, &end, perms, &offset, device, &inode, name);
       if(ret==7 && strcmp(name,"[stack]")==0) {
+	//fprintf(stderr, "before stack\n");
         adm_object_t* obj = adm_db_insert(start, end-start, 1);
         if(obj) {
           obj->meta.meta[ADM_META_VAR_TYPE] = names->malloc(sizeof("[stack]"+1));
           strcpy(static_cast<char*>(obj->meta.meta[ADM_META_VAR_TYPE]), "[stack]");
         }
+	//fprintf(stderr, "after stack\n");
         break;
       }
     }

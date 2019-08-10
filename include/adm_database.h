@@ -15,6 +15,14 @@
 
 static pthread_mutex_t object_lock = PTHREAD_MUTEX_INITIALIZER;
 
+static pthread_mutex_t ts_count_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_mutex_t ts_core_count_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_mutex_t fs_count_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_mutex_t fs_core_count_lock = PTHREAD_MUTEX_INITIALIZER;
+
 namespace adamant
 {
 
@@ -202,13 +210,29 @@ class adm_object_t
 
     void inc_ts_core_matrix(int a, int b, double inc) {true_sharing_core_matrix[a][b] = true_sharing_core_matrix[a][b] + inc;};
 
-    void inc_fs_count(double inc) {false_sharing_count = false_sharing_count + inc;};
+    void inc_fs_count(double inc) {
+	pthread_mutex_lock(&fs_count_lock);
+	false_sharing_count = false_sharing_count + inc;
+	pthread_mutex_unlock(&fs_count_lock);
+    };
 
-    void inc_fs_core_count(double inc) {false_sharing_core_count = false_sharing_core_count + inc;};
+    void inc_fs_core_count(double inc) {
+	pthread_mutex_lock(&fs_core_count_lock);
+	false_sharing_core_count = false_sharing_core_count + inc;
+	pthread_mutex_unlock(&fs_core_count_lock);
+    };
 
-    void inc_ts_count(double inc) {true_sharing_count = true_sharing_count + inc;};
+    void inc_ts_count(double inc) {
+	pthread_mutex_lock(&ts_count_lock);
+	true_sharing_count = true_sharing_count + inc;
+	pthread_mutex_unlock(&ts_count_lock);
+    };
 
-    void inc_ts_core_count(double inc) {true_sharing_core_count = true_sharing_core_count + inc;};
+    void inc_ts_core_count(double inc) {
+	pthread_mutex_lock(&ts_core_count_lock);
+	true_sharing_core_count = true_sharing_core_count + inc;
+	pthread_mutex_unlock(&ts_core_count_lock);
+    };
 
     double get_fs_count() const noexcept { return false_sharing_count; };
 
@@ -317,7 +341,7 @@ class adm_object_t
         if (indent) {
             std::cout << std::setw(indent) << ' ';
         }
-        std::cout<< this->object_id << "\n ";
+        std::cout<< "id: " << this->object_id << " comm count: " << this->get_fs_count() + this->get_ts_count() << "\n ";
     }
 
 };

@@ -55,14 +55,6 @@ adm_splay_tree_t* adm_db_find_node_by_address(const uint64_t address) noexcept
   return nullptr;
 }
 
-ADM_VISIBILITY
-adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
-{
-  adm_splay_tree_t* node = adm_db_find_node_by_address(address);
-  if(node) return node->object;
-  return nullptr;
-}
-
 static inline
 adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept
 {
@@ -77,6 +69,33 @@ adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept
     return nullptr;
   }
   return nullptr;
+}
+
+ADM_VISIBILITY
+adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
+{
+  adm_splay_tree_t* node = adm_db_find_node_by_address(address);
+  if(node) return node->object;
+  fprintf(stderr, "this one is reached 0\n");
+  if(object_tree) {
+	adm_object_t* obj = adm_db_find_by_object_id(0);
+	if(obj)
+		return obj;
+	obj = objects->malloc();
+  	if(obj == nullptr) return nullptr;
+  	obj->set_object_id(0);
+  	pthread_mutex_lock(&node_lock);
+  	object_tree = obj->splay();
+  	pthread_mutex_unlock(&node_lock);
+  }
+  //return nullptr;
+  fprintf(stderr, "this one is reached\n");
+  adm_object_t* obj = objects->malloc();
+  if(obj == nullptr) return nullptr;
+  obj->set_object_id(0);
+  pthread_mutex_lock(&node_lock);
+  object_tree = obj->splay();
+  pthread_mutex_unlock(&node_lock);
 }
 
 ADM_VISIBILITY
@@ -233,30 +252,30 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 	set<struct shared_object> object_comm_core_count;
 
 	bool all = adm_conf_string("+all", "1");
-	pool_t<adm_splay_tree_t, ADM_DB_OBJ_BLOCKSIZE>::iterator n(*nodes);
+	pool_t<adm_object_t, ADM_DB_OBJ_BLOCKSIZE>::iterator n(*objects);
 	int i = 0;
 	int object_count = 0;
 	fprintf(stderr, "reach 1\n");
-	for(adm_splay_tree_t* obj = n.next(); obj!=nullptr; obj = n.next()) {
+	for(adm_object_t* obj = n.next(); obj!=nullptr; obj = n.next()) {
 		//fprintf(stderr, "iteration begins\n");
-		shared_object ts_node = { obj->object->get_object_id(), obj->object->get_ts_count() };
+		shared_object ts_node = { obj->get_object_id(), obj->get_ts_count() };
 		object_ts_count.insert(ts_node);
 		//fprintf(stderr, "iteration mids\n");
-		shared_object ts_core_node = { obj->object->get_object_id(), obj->object->get_ts_core_count() };
+		shared_object ts_core_node = { obj->get_object_id(), obj->get_ts_core_count() };
 		object_ts_core_count.insert(ts_core_node);
 
-		shared_object fs_node = { obj->object->get_object_id(), obj->object->get_fs_count() };
+		shared_object fs_node = { obj->get_object_id(), obj->get_fs_count() };
 		object_fs_count.insert(fs_node);
 
 		//fprintf(stderr, "iteration mids 1/2\n");
 
-		shared_object fs_core_node = { obj->object->get_object_id(), obj->object->get_fs_core_count() };
+		shared_object fs_core_node = { obj->get_object_id(), obj->get_fs_core_count() };
 		object_fs_core_count.insert(fs_core_node);
 
-		shared_object comm_node = { obj->object->get_object_id(), obj->object->get_fs_count() + obj->object->get_ts_count() };
+		shared_object comm_node = { obj->get_object_id(), obj->get_fs_count() + obj->get_ts_count() };
 		object_comm_count.insert(comm_node);
 
-		shared_object comm_core_node = { obj->object->get_object_id(), obj->object->get_fs_core_count() + obj->object->get_ts_core_count() };
+		shared_object comm_core_node = { obj->get_object_id(), obj->get_fs_core_count() + obj->get_ts_core_count() };
 		object_comm_core_count.insert(comm_core_node);
 		//fprintf(stderr, "iteration mids 2\n");
 		//obj->object->print();
@@ -552,8 +571,8 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 	fprintf(stderr, "reach 14\n");
 	fprintf(stderr, "pretty printing tree of objects\n");
 	object_tree->postorder(0);
-	fprintf(stderr, "pretty printing tree of address ranges\n");
-	tree->postorder(0);
+	/*fprintf(stderr, "pretty printing tree of address ranges\n");
+	tree->postorder(0);*/
 	// after
 }
 
