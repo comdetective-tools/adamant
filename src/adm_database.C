@@ -71,12 +71,13 @@ adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept
   return nullptr;
 }
 
+/*
 ADM_VISIBILITY
 adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
 {
   adm_splay_tree_t* node = adm_db_find_node_by_address(address);
   if(node) return node->object;
-  fprintf(stderr, "this one is reached 0\n");
+  //fprintf(stderr, "this one is reached 0\n");
   if(object_tree) {
 	adm_object_t* obj = adm_db_find_by_object_id(0);
 	if(obj)
@@ -89,14 +90,14 @@ adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
   	pthread_mutex_unlock(&node_lock);
   }
   //return nullptr;
-  fprintf(stderr, "this one is reached\n");
+  //fprintf(stderr, "this one is reached\n");
   adm_object_t* obj = objects->malloc();
   if(obj == nullptr) return nullptr;
   obj->set_object_id(0);
   pthread_mutex_lock(&node_lock);
   object_tree = obj->splay();
   pthread_mutex_unlock(&node_lock);
-}
+}*/
 
 ADM_VISIBILITY
 adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size, const int object_id, const state_t state) noexcept
@@ -192,6 +193,16 @@ adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size
   }
 
   return obj->object;
+}
+
+ADM_VISIBILITY
+adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
+{
+  adm_splay_tree_t* node = adm_db_find_node_by_address(address);
+  if(node) return node->object;
+  if(objects != nullptr)
+  	return adm_db_insert(address, 4, 0, ADM_STATE_ALLOC);
+  return nullptr;
 }
 
 ADM_VISIBILITY

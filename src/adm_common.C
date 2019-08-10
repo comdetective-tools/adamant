@@ -233,11 +233,11 @@ extern "C"
 //__attribute__((destructor))
 void inc_false_count(uint64_t address1, uint64_t address2, double inc)
 {
-  fprintf(stderr, "increment per object happens for false sharing\n");
+  //fprintf(stderr, "increment per object happens for false sharing\n");
   adm_object_t* obj1 = adm_db_find_by_address(address1);
   adm_object_t* obj2 = adm_db_find_by_address(address2);
 
-  fprintf(stderr, "increment per object happens for false sharing on object with ids %d and %d\n", obj1->get_object_id(), obj2->get_object_id());
+  //fprintf(stderr, "increment per object happens for false sharing on object with ids %d and %d\n", obj1->get_object_id(), obj2->get_object_id());
 
   if(obj1 && obj2) {
         if(obj1->get_object_id() == obj2->get_object_id()) {
@@ -288,7 +288,7 @@ extern "C"
 //__attribute__((destructor))
 void inc_true_matrix(uint64_t address, int a, int b, double inc)
 {
-  fprintf(stderr, "increment per object happens for true sharing\n");
+  //fprintf(stderr, "increment per object happens for true sharing\n");
   adm_object_t* obj = adm_db_find_by_address(address);
   if(obj) {
     obj->inc_ts_matrix(a, b, inc);
