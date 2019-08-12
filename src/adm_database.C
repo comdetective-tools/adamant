@@ -199,7 +199,7 @@ ADM_VISIBILITY
 adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
 {
   adm_splay_tree_t* node = adm_db_find_node_by_address(address);
-  if(node) return node->object;
+  if(node && !(node->get_state()&ADM_STATE_FREE)) return node->object;
   if(objects != nullptr)
   	return adm_db_insert(address, 4, 0, ADM_STATE_ALLOC);
   return nullptr;
