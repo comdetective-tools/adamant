@@ -377,6 +377,9 @@ void adm_db_print(char output_directory[], const char * executable_name, int pid
 ADM_VISIBILITY
 char* adm_db_get_var_name(uint64_t address) noexcept;
 
+ADM_VISIBILITY
+adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept;
+
 }
 
 #endif

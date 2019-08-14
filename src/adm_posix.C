@@ -28,13 +28,13 @@ ADM_VISIBILITY void* (*adamant::mmap_ptr)(void*,size_t,int,int,int,off_t) = null
 ADM_VISIBILITY void* (*adamant::mmap64_ptr)(void*,size_t,int,int,int,off64_t) = nullptr;
 ADM_VISIBILITY int   (*adamant::munmap_ptr)(void*,size_t) = nullptr;
 
-static pool_t<adamant::stack_t, ADM_META_STACK_BLOCKSIZE>* stacks;
+pool_t<adamant::stack_t, ADM_META_STACK_BLOCKSIZE>* stacks;
 
 static uint8_t static_buffer[ADM_MEM_STATIC_BUFFER];
 static uint8_t* static_buffer_ptr=static_buffer;
 uint8_t init_posix = 0;
 
-static inline
+inline
 void get_stack(adamant::stack_t& frames)
 {
   unw_cursor_t cursor; unw_context_t uc;

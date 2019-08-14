@@ -55,8 +55,8 @@ adm_splay_tree_t* adm_db_find_node_by_address(const uint64_t address) noexcept
   return nullptr;
 }
 
-static inline
-adm_object_t* adm_db_find_by_object_id(const int object_id) noexcept
+ADM_VISIBILITY
+adm_object_t* adamant::adm_db_find_by_object_id(const int object_id) noexcept
 {
   if(object_tree) {
     adm_object_t* obj = object_tree->find(object_id);
