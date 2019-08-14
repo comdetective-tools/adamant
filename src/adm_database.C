@@ -196,6 +196,36 @@ adm_object_t* adamant::adm_db_insert(const uint64_t address, const uint64_t size
 }
 
 ADM_VISIBILITY
+adm_object_t* adamant::adm_db_insert_by_object_id(const int object_id, const state_t state) noexcept
+{
+
+    adm_object_t* target_object = nullptr;
+    adm_object_t* parent_object = nullptr;
+
+    if(object_tree) object_tree->find_with_parent(object_id, parent_object, target_object);
+    
+    if(target_object==nullptr) {
+    	adm_object_t* obj = objects->malloc();
+    	if(obj==nullptr) return nullptr;
+	obj->set_object_id(object_id);
+	target_object = obj;
+	if(parent_object!=nullptr)
+      		parent_object->insert(target_object);
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+    } else {
+	adm_object_t* obj = target_object;
+	pthread_mutex_lock(&node_lock);
+	object_tree = target_object->splay();
+	pthread_mutex_unlock(&node_lock);
+    }
+  
+
+  return target_object;
+}
+
+ADM_VISIBILITY
 adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
 {
   adm_splay_tree_t* node = adm_db_find_node_by_address(address);

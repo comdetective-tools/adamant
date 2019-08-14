@@ -259,6 +259,17 @@ void inc_false_count(uint64_t address1, uint64_t address2, double inc)
 }
 
 extern "C"
+int get_object_id_by_address(uint64_t address)
+{
+  adm_object_t* obj = adm_db_find_by_address(address);
+
+  if(obj) {
+        return obj->get_object_id();
+  }
+  return -1;
+}
+
+extern "C"
 //__attribute__((destructor))
 void inc_false_core_count(uint64_t address1, uint64_t address2, double inc)
 {

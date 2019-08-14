@@ -41,3 +41,5 @@ void inc_true_core_count(uint64_t address, double inc);
 void inc_false_count(uint64_t address1, uint64_t address2, double inc);
 
 void inc_false_core_count(uint64_t address1, uint64_t address2, double inc);
+
+int get_object_id_by_address(uint64_t address);

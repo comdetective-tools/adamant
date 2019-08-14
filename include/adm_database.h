@@ -350,6 +350,9 @@ ADM_VISIBILITY
 adm_object_t* adm_db_insert(const uint64_t address, const uint64_t size, const int object_id, const state_t state=ADM_STATE_STATIC) noexcept;
 
 ADM_VISIBILITY
+adm_object_t* adm_db_insert_by_object_id(const int object_id, const state_t state) noexcept;
+
+ADM_VISIBILITY
 adm_object_t* adm_db_find_by_address(const uint64_t address) noexcept;
 
 ADM_VISIBILITY
