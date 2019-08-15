@@ -34,6 +34,13 @@ static uint8_t static_buffer[ADM_MEM_STATIC_BUFFER];
 static uint8_t* static_buffer_ptr=static_buffer;
 uint8_t init_posix = 0;
 
+static int string_ends_with(const char *str, const char *suf) {
+    size_t str_len = strlen(str);
+    size_t suf_len = strlen(suf);
+
+    return !strncmp(str + str_len - suf_len, suf, suf_len);
+}
+
 inline
 void get_stack(adamant::stack_t& frames)
 {
@@ -45,7 +52,31 @@ void get_stack(adamant::stack_t& frames)
   for(uint8_t f=0; f < ADM_META_STACK_DEPTH && unw_step(&cursor) > 0 && func < ADM_META_STACK_NAMES; ++f) {
     unw_get_reg(&cursor, UNW_REG_IP, &frames.ip[f]);
     unw_word_t offp;
-    unw_get_proc_name(&cursor, &frames.function[func], ADM_META_STACK_NAMES-func, &offp);
+    char sym[256];
+    unw_get_proc_name(&cursor, sym, ADM_META_STACK_NAMES-func, &offp);
+
+    if(strlen(sym) >= 8 && strncmp(sym, "OnSample", 8) == 0)
+	//fprintf(stderr, "OnSample is detected\n");
+	continue;
+      if(strlen(sym) >= 18 && strncmp(sym, "perf_event_handler", 18) == 0)
+	//fprintf(stderr, "perf_event_handler is detected\n");
+	continue;
+      if(strlen(sym) >= 22 && strncmp(sym, "monitor_signal_handler", 22) == 0)
+	//fprintf(stderr, "monitor_signal_handler is detected\n");
+	continue;
+      if(strlen(sym) >= 6 && strncmp(sym, "killpg", 6) == 0)
+	//fprintf(stderr, "killpg is detected\n");
+	continue;
+      if(strlen(sym) >= 22 && strncmp(sym, "ComDetectiveWPCallback", 22) == 0)
+	//fprintf(stderr, "ComDetectiveWPCallback is detected\n");
+	continue;
+      if(strlen(sym) >= 12 && strncmp(sym, "OnWatchPoint", 12) == 0)
+	//fprintf(stderr, "OnWatchPoint is detected\n");
+	continue;
+      if(string_ends_with(sym, "by_object_id"))
+	continue;
+
+    strncpy(&frames.function[func], sym, strlen(sym));
     func += strlen(&frames.function[func])+1;
   }
 }
