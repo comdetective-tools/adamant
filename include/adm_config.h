@@ -13,7 +13,7 @@ constexpr uint32_t ADM_DB_OBJ_BLOCKSIZE = 64;
 
 constexpr uint32_t ADM_META_BASE_BLOCKSIZE = 256;
 constexpr uint32_t ADM_META_STACK_BLOCKSIZE = 256;
-constexpr uint32_t ADM_META_STACK_DEPTH = 8;
+constexpr uint32_t ADM_META_STACK_DEPTH = 12;
 constexpr uint32_t ADM_META_STACK_NAMEL = 16;
 constexpr uint32_t ADM_META_STACK_NAMES = ADM_META_STACK_NAMEL*ADM_META_STACK_DEPTH;
 
