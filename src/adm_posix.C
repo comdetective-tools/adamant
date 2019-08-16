@@ -75,6 +75,8 @@ void get_stack(adamant::stack_t& frames)
 	continue;
       if(string_ends_with(sym, "by_object_id"))
 	continue;
+      if(string_ends_with(sym, "_adm"))
+	continue;
 
     strncpy(&frames.function[func], sym, strlen(sym));
     func += strlen(&frames.function[func])+1;
@@ -84,12 +86,12 @@ void get_stack(adamant::stack_t& frames)
 //static inline
 void pointers_init()
 {
-  fprintf(stderr, "calloc is initialized\n");
+  //fprintf(stderr, "calloc is initialized\n");
   /*malloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "malloc"));
   free_ptr = reinterpret_cast<void(*)(void*)>(dlsym(RTLD_NEXT, "free"));
   realloc_ptr = reinterpret_cast<void*(*)(void*,size_t)>(dlsym(RTLD_NEXT, "realloc"));*/
   //calloc_ptr = reinterpret_cast<void*(*)(size_t,size_t)>(dlsym(RTLD_NEXT, "calloc"));
-  fprintf(stderr, "calloc is initialized 2\n");
+  //fprintf(stderr, "calloc is initialized 2\n");
   /*valloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "valloc"));
   pvalloc_ptr = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT, "pvalloc"));
   memalign_ptr = reinterpret_cast<void*(*)(size_t,size_t)>(dlsym(RTLD_NEXT, "memalign"));

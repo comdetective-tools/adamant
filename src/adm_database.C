@@ -231,7 +231,7 @@ adm_object_t* adamant::adm_db_find_by_address(const uint64_t address) noexcept
   adm_splay_tree_t* node = adm_db_find_node_by_address(address);
   if(node && !(node->get_state()&ADM_STATE_FREE)) return node->object;
   if(objects != nullptr)
-  	return adm_db_insert(address, 4, 0, ADM_STATE_ALLOC);
+  	return adm_db_insert(address, 8, 0, ADM_STATE_ALLOC);
   return nullptr;
 }
 
@@ -296,7 +296,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 	pool_t<adm_object_t, ADM_DB_OBJ_BLOCKSIZE>::iterator n(*objects);
 	int i = 0;
 	int object_count = 0;
-	fprintf(stderr, "reach 1\n");
+	//fprintf(stderr, "reach 1\n");
 	for(adm_object_t* obj = n.next(); obj!=nullptr; obj = n.next()) {
 		//fprintf(stderr, "iteration begins\n");
 		shared_object ts_node = { obj->get_object_id(), obj->get_ts_count() };
@@ -324,14 +324,14 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		//fprintf(stderr, "iteration ends\n");
 		//fprintf(stderr, "object count: %d\n", object_count);
   	}
-	fprintf(stderr, "reach 2\n");
+	//fprintf(stderr, "reach 2\n");
    	set<struct shared_object>::iterator it;  
   	
 	FILE * ts_fp;
 	char ts_file_name[PATH_MAX];
 	sprintf(ts_file_name, "%s/%s-%d-ts_object_ranking.txt", output_directory, executable_name, pid );
 	ts_fp = fopen (ts_file_name, "w+");    
-	fprintf(stderr, "reach 3\n");
+	//fprintf(stderr, "reach 3\n");
 	for (it = object_ts_count.begin(), i = 0; it != object_ts_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -374,12 +374,12 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
     	} 
 	fclose(ts_fp);
 
-	fprintf(stderr, "reach 4\n");
+	//fprintf(stderr, "reach 4\n");
 	FILE * ts_core_fp;
 	char ts_core_file_name[PATH_MAX];
 	sprintf(ts_core_file_name, "%s/%s-%d-ts_core_object_ranking.txt", output_directory, executable_name, pid );
 	ts_core_fp = fopen (ts_core_file_name, "w+");    
-	fprintf(stderr, "reach 5\n");
+	//fprintf(stderr, "reach 5\n");
 	for (it = object_ts_core_count.begin(), i = 0; it != object_ts_core_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -420,13 +420,13 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(ts_core_fp);
-	fprintf(stderr, "reach 6\n");
+	//fprintf(stderr, "reach 6\n");
 	// before
 	FILE * fs_fp;
 	char fs_file_name[PATH_MAX];
 	sprintf(fs_file_name, "%s/%s-%d-fs_object_ranking.txt", output_directory, executable_name, pid );
 	fs_fp = fopen (fs_file_name, "w+");    
-	fprintf(stderr, "reach 7\n");
+	//fprintf(stderr, "reach 7\n");
 	for (it = object_fs_count.begin(), i = 0; it != object_fs_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -467,12 +467,12 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(fs_fp);
-	fprintf(stderr, "reach 8\n");
+	//fprintf(stderr, "reach 8\n");
 	FILE * fs_core_fp;
 	char fs_core_file_name[PATH_MAX];
 	sprintf(fs_core_file_name, "%s/%s-%d-fs_core_object_ranking.txt", output_directory, executable_name, pid );
 	fs_core_fp = fopen (fs_core_file_name, "w+");    
-	fprintf(stderr, "reach 9\n");
+	//fprintf(stderr, "reach 9\n");
 	for (it = object_fs_core_count.begin(), i = 0; it != object_fs_core_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -514,13 +514,13 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
     	} 
 	fclose(fs_core_fp);
 	// after
-	fprintf(stderr, "reach 10\n");
+	//fprintf(stderr, "reach 10\n");
 	// before
 	FILE * comm_fp;
 	char comm_file_name[PATH_MAX];
 	sprintf(comm_file_name, "%s/%s-%d-as_object_ranking.txt", output_directory, executable_name, pid );
 	comm_fp = fopen (comm_file_name, "w+");    
-	fprintf(stderr, "reach 11\n");
+	//fprintf(stderr, "reach 11\n");
 	for (it = object_comm_count.begin(), i = 0; it != object_comm_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -563,12 +563,12 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(comm_fp);
-	fprintf(stderr, "reach 12\n");
+	//fprintf(stderr, "reach 12\n");
 	FILE * comm_core_fp;
 	char comm_core_file_name[PATH_MAX];
 	sprintf(comm_core_file_name, "%s/%s-%d-as_core_object_ranking.txt", output_directory, executable_name, pid );
 	comm_core_fp = fopen (comm_core_file_name, "w+");    
-	fprintf(stderr, "reach 13\n");
+	//fprintf(stderr, "reach 13\n");
 	for (it = object_comm_core_count.begin(), i = 0; it != object_comm_core_count.end() && i < 50; it++, i++) 
 	{  
 		adm_object_t* obj = adm_db_find_by_object_id((*it).object_id); 
@@ -609,9 +609,9 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		fclose(fp);
     	} 
 	fclose(comm_core_fp);
-	fprintf(stderr, "reach 14\n");
-	fprintf(stderr, "pretty printing tree of objects\n");
-	object_tree->postorder(0);
+	//fprintf(stderr, "reach 14\n");
+	//fprintf(stderr, "pretty printing tree of objects\n");
+	//object_tree->postorder(0);
 	/*fprintf(stderr, "pretty printing tree of address ranges\n");
 	tree->postorder(0);*/
 	// after
