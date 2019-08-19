@@ -201,17 +201,8 @@ void inc_false_matrix(uint64_t address1, uint64_t address2, int a, int b, double
 {
   adm_object_t* obj1 = adm_db_find_by_address(address1);
   adm_object_t* obj2 = adm_db_find_by_address(address2);
-  if(obj1 && obj2) {
-        if(obj1->get_object_id() == obj2->get_object_id()) {
-                obj1->inc_fs_matrix(a, b, inc);
-        } else {
-                obj1->inc_fs_matrix(a, b, inc);
-                obj2->inc_fs_matrix(a, b, inc);
-        }  
-  } else if(obj1) {
-        obj1->inc_fs_matrix(a, b, inc);
-  } else if(obj2) {
-        obj2->inc_fs_matrix(a, b, inc);
+  if(obj1 && obj2 && (obj1->get_object_id() == obj2->get_object_id())) {
+  	obj1->inc_fs_matrix(a, b, inc);
   }
 }
 
@@ -242,18 +233,9 @@ void inc_false_core_matrix(uint64_t address1, uint64_t address2, int a, int b, d
 {
   adm_object_t* obj1 = adm_db_find_by_address(address1);
   adm_object_t* obj2 = adm_db_find_by_address(address2);
-  if(obj1 && obj2) {
-	if(obj1->get_object_id() == obj2->get_object_id()) {
-		obj1->inc_fs_core_matrix(a, b, inc);
-	} else {
-		obj1->inc_fs_core_matrix(a, b, inc);
-		obj2->inc_fs_core_matrix(a, b, inc);
-	}
-  } else if(obj1) {
-    	obj1->inc_fs_core_matrix(a, b, inc);
-  } else if(obj2) {
-	obj2->inc_fs_core_matrix(a, b, inc);
-  }
+  if(obj1 && obj2 && (obj1->get_object_id() == obj2->get_object_id())) {
+	obj1->inc_fs_core_matrix(a, b, inc);
+  } 
 }
 
 extern "C"
@@ -290,16 +272,7 @@ void inc_false_count(uint64_t address1, uint64_t address2, double inc)
 	int id2 = obj2->get_object_id();
         if((id1 == id2) && (id1 > 1)) {
                 obj1->inc_fs_count(inc);
-        } else {
-		if(id1 > 1)
-                	obj1->inc_fs_count(inc);
-		if(id2 > 1)
-                	obj2->inc_fs_count(inc);
-        }
-  } else if(obj1 && obj1->get_object_id() > 1) {
-        obj1->inc_fs_count(inc);
-  } else if(obj2 && obj2->get_object_id() > 1) {
-        obj2->inc_fs_count(inc);
+        } 
   }
 }
 
@@ -346,16 +319,7 @@ void inc_false_core_count(uint64_t address1, uint64_t address2, double inc)
 	int id2 = obj2->get_object_id();
         if((id1 == id2) && (id1 > 1)) {
                 obj1->inc_fs_core_count(inc);
-        } else {
-		if(id1 > 1)
-                	obj1->inc_fs_core_count(inc);
-		if(id2 > 1)
-                	obj2->inc_fs_core_count(inc);
-        }
-  } else if(obj1 && obj1->get_object_id() > 1) {
-        obj1->inc_fs_core_count(inc);
-  } else if(obj2 && obj2->get_object_id() > 1) {
-        obj2->inc_fs_core_count(inc);
+        } 
   }
 }
 
