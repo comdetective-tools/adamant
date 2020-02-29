@@ -351,6 +351,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(ts_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(ts_fp, "%s ", stack->function+func);
@@ -398,6 +399,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(ts_core_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(ts_core_fp, "%s ", stack->function+func);
@@ -445,6 +447,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(fs_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(fs_fp, "%s ", stack->function+func);
@@ -491,6 +494,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(fs_core_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(fs_core_fp, "%s ", stack->function+func);
@@ -541,6 +545,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(comm_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(comm_fp, "%s ", stack->function+func);
@@ -587,6 +592,7 @@ void adamant::adm_db_print(char output_directory[], const char * executable_name
 		const adamant::stack_t* stack = static_cast<const adamant::stack_t*>(obj->meta.meta[ADM_META_STACK_TYPE]);
   		if(obj->meta.meta[ADM_META_STACK_TYPE] != nullptr) {
     			uint32_t func = 0;
+			fprintf(comm_core_fp, "call stack: ");
     			for(uint8_t f=0; f < ADM_META_STACK_DEPTH && stack->ip[f]; ++f) {
       				size_t len = strlen(stack->function+func)+1;
       				fprintf(comm_core_fp, "%s ", stack->function+func);
