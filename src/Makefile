@@ -1,6 +1,6 @@
-CXXFLAGS=-Wall -fPIC -O0 -g -I../include -std=c++11 -fno-inline
+CXXFLAGS=-Wall -fPIC -O0 -g -I../include -I../../hpctoolkit-externals/x86_64-unknown-linux-gnu/libunwind/include -std=c++11 -fno-inline
 #CXXFLAGS=-Wall -fPIC -O2 -g -I../include -std=c++11
-LDFLAGS=-shared -ldl -lunwind -lz -ldl -lpthread
+LDFLAGS=-shared -ldl -lunwind -L../../hpctoolkit-externals/x86_64-unknown-linux-gnu/libunwind/lib -lz -ldl -lpthread
 
 OBJECTS := $(patsubst %.C,%.o,$(wildcard *.C))
 INCLUDES := $(notdir $(wildcard ../include/*.h))
